@@ -1,15 +1,54 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/chzyer/readline"
 )
 
+type SimpleCompleter struct {
+	commands []string
+}
+
+// Complete provides autocompletions based on the input
+func (c *SimpleCompleter) Do(line []rune, pos int) ([][]rune, int) {
+	var newLine [][]rune
+
+	for _, cmd := range c.commands {
+		sline := string(line)
+		sline = strings.TrimPrefix(sline, "$")
+		sline = strings.TrimSpace(sline)
+		trimmed_cmd := strings.TrimPrefix(cmd, sline)
+		newLine = append(newLine, []rune(trimmed_cmd))
+	}
+	return newLine, pos
+}
+
 func main() {
-	reader := bufio.NewReader(os.Stdin)
+	completer := &SimpleCompleter{
+		commands: []string{
+			"exit",
+			"cd",
+			"ls",
+			"echo",
+		},
+	}
+
+	reader, err := readline.NewEx(&readline.Config{
+		Prompt:          ">> ",
+		HistoryFile:     "history.txt",
+		AutoComplete:    completer,
+		InterruptPrompt: "^C",
+	})
+
+	if err != nil {
+		fmt.Println("Error creating readline instance")
+		return
+	}
+
 	fmt.Println("Welcome to Mono")
 	fmt.Println("---------------------")
 
@@ -21,8 +60,7 @@ func main() {
 
 	for {
 		fmt.Println(currentDir)
-		fmt.Print("mono>>")
-		input, _ := reader.ReadString('\n')
+		input, _ := reader.Readline()
 		input = strings.TrimSpace(input)
 		if strings.HasPrefix(input, "$") {
 			input = strings.TrimPrefix(input, "$")
@@ -31,7 +69,7 @@ func main() {
 
 			//check for exit
 			if input == "exit" {
-				fmt.Println("Exiting CLI...")
+				fmt.Println("Exiting...")
 				break
 			}
 			//check for cd
